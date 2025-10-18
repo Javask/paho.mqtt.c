@@ -15,7 +15,7 @@
 #     Genis Riera Perez - Add support for building debian package
 #*******************************************************************************/
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 project("Eclipse Paho C" 
   VERSION 1.3.15
@@ -52,13 +52,13 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 endif()
 
 ## build options
-option(PAHO_WITH_SSL "Flag that defines whether to build ssl-enabled binaries too. " FALSE)
+option(PAHO_WITH_SSL "Flag that defines whether to build ssl-enabled binaries too. " TRUE)
 option(PAHO_WITH_LIBRESSL "Flag that defines whether to build ssl-enabled binaries with LibreSSL instead of OpenSSL. " FALSE)
 option(PAHO_WITH_LIBUUID "Flag that defines whether libuuid or a custom uuid implementation should be used" FALSE)
 option(PAHO_BUILD_SHARED "Build shared library" TRUE)
 option(PAHO_BUILD_STATIC "Build static library" FALSE)
 option(PAHO_BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" FALSE)
-option(PAHO_BUILD_SAMPLES "Build sample programs" FALSE)
+option(PAHO_BUILD_SAMPLES "Build sample programs" TRUE)
 option(PAHO_BUILD_DEB_PACKAGE "Build debian package" FALSE)
 option(PAHO_ENABLE_TESTING "Build tests and run" TRUE)
 option(PAHO_ENABLE_CPACK "Enable CPack" TRUE)
