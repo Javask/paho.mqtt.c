@@ -619,6 +619,11 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 				rc = SSL_CTX_set_min_proto_version(net->ctx, TLS1_2_VERSION);
 				break;
 #endif
+#if defined(SSL_OP_NO_TLSv1_3) && !defined(OPENSSL_NO_TLS1_3)
+			case MQTT_SSL_VERSION_TLS_1_3:
+				rc = SSL_CTX_set_min_proto_version(net->ctx, TLS1_3_VERSION);
+				break;
+#endif
 			default:
 				break;
 			}
