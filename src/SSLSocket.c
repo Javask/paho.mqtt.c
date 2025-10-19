@@ -639,11 +639,11 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 #endif
 	}
 
-/*
+
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
 	SSL_CTX_set_security_level(net->ctx, 1);
 #endif
-*/
+
 
 	if (opts->keyStore)
 	{
