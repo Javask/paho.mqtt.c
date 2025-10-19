@@ -569,12 +569,12 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 			net->ctx = SSL_CTX_new(TLSv1_client_method());
 			break;
 #endif
-#if defined(SSL_OP_NO_TLSv1_1) && !defined(OPENSSL_NO_TLS1)
+#if defined(SSL_OP_NO_TLSv1_1) && !defined(OPENSSL_NO_TLS1_1)
 		case MQTT_SSL_VERSION_TLS_1_1:
 			net->ctx = SSL_CTX_new(TLSv1_1_client_method());
 			break;
 #endif
-#if defined(SSL_OP_NO_TLSv1_2) && !defined(OPENSSL_NO_TLS1)
+#if defined(SSL_OP_NO_TLSv1_2) && !defined(OPENSSL_NO_TLS1_2)
 		case MQTT_SSL_VERSION_TLS_1_2:
 			net->ctx = SSL_CTX_new(TLSv1_2_client_method());
 			break;
@@ -591,6 +591,47 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 				SSLSocket_error("SSL_CTX_new", NULL, net->socket, rc, NULL, NULL);
 			goto exit;
 		}
+
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+		{
+			int sslVersion = MQTT_SSL_VERSION_DEFAULT;
+			if (opts->struct_version >= 1) sslVersion = opts->sslVersion;
+
+			rc = 0;
+
+			switch (sslVersion)
+			{
+			case MQTT_SSL_VERSION_DEFAULT:
+				rc = SSL_CTX_set_min_proto_version(net->ctx, 0);
+				break;
+#if defined(SSL_OP_NO_TLSv1) && !defined(OPENSSL_NO_TLS1)
+			case MQTT_SSL_VERSION_TLS_1_0:
+				rc = SSL_CTX_set_min_proto_version(net->ctx, TLS1_VERSION);
+				break;
+#endif
+#if defined(SSL_OP_NO_TLSv1_1) && !defined(OPENSSL_NO_TLS1_1)
+			case MQTT_SSL_VERSION_TLS_1_1:
+				rc = SSL_CTX_set_min_proto_version(net->ctx, TLS1_1_VERSION);
+				break;
+#endif
+#if defined(SSL_OP_NO_TLSv1_2) && !defined(OPENSSL_NO_TLS1_2)
+			case MQTT_SSL_VERSION_TLS_1_2:
+				rc = SSL_CTX_set_min_proto_version(net->ctx, TLS1_2_VERSION);
+				break;
+#endif
+			default:
+				break;
+			}
+		}
+		if (rc == 0)
+		{
+			if (opts->struct_version >= 3)
+				SSLSocket_error("SSL_CTX_set_min_proto_version", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
+			else
+				SSLSocket_error("SSL_CTX_set_min_proto_version", NULL, net->socket, rc, NULL, NULL);
+			goto free_ctx;
+		}
+#endif
 	}
 
 /*
