@@ -56,7 +56,7 @@ option(PAHO_WITH_SSL "Flag that defines whether to build ssl-enabled binaries to
 option(PAHO_WITH_LIBRESSL "Flag that defines whether to build ssl-enabled binaries with LibreSSL instead of OpenSSL. " FALSE)
 option(PAHO_WITH_LIBUUID "Flag that defines whether libuuid or a custom uuid implementation should be used" FALSE)
 option(PAHO_BUILD_SHARED "Build shared library" TRUE)
-option(PAHO_BUILD_STATIC "Build static library" FALSE)
+option(PAHO_BUILD_STATIC "Build static library" TRUE)
 option(PAHO_BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" FALSE)
 option(PAHO_BUILD_SAMPLES "Build sample programs" TRUE)
 option(PAHO_BUILD_DEB_PACKAGE "Build debian package" FALSE)
