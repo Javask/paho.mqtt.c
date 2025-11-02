@@ -43,6 +43,9 @@
 #include <openssl/err.h>
 #include <openssl/crypto.h>
 #include <openssl/x509v3.h>
+#ifndef OPENSSL_NO_ENGINE
+#include <openssl/engine.h>
+#endif
 
 extern Sockets mod_s;
 
@@ -546,6 +549,10 @@ exit:
 int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 {
 	int rc = 1;
+	#ifndef OPENSSL_NO_ENGINE
+	ENGINE* eng = NULL;
+	EVP_PKEY* pkey = NULL;
+	#endif
 
 	FUNC_ENTRY;
 	if (net->ctx == NULL)
@@ -664,17 +671,76 @@ int SSLSocket_createContext(networkHandles* net, MQTTClient_SSLOptions* opts)
 			SSL_CTX_set_default_passwd_cb(net->ctx, pem_passwd_cb);
 			SSL_CTX_set_default_passwd_cb_userdata(net->ctx, (void*)opts->privateKeyPassword);
 		}
+#ifndef OPENSSL_NO_ENGINE
+		ENGINE_load_builtin_engines();
 
-		/* support for ASN.1 == DER format? DER can contain only one certificate? */
-		rc = SSL_CTX_use_PrivateKey_file(net->ctx, opts->privateKey, SSL_FILETYPE_PEM);
-		if (opts->privateKey == opts->keyStore)
-			opts->privateKey = NULL;
-		if (rc != 1)
-		{
-			if (opts->struct_version >= 3)
-				SSLSocket_error("SSL_CTX_use_PrivateKey_file", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
-			else
-				SSLSocket_error("SSL_CTX_use_PrivateKey_file", NULL, net->socket, rc, NULL, NULL);
+		if(opts->ssl_engine){
+			eng = ENGINE_by_id(opts->ssl_engine);
+			if(eng == NULL){
+				rc = 0;
+				if (opts->struct_version >= 3)
+					SSLSocket_error("ENGINE_by_id", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
+				else
+					SSLSocket_error("ENGINE_by_id", NULL, net->socket, rc, NULL, NULL);
+				goto free_ctx;
+			}
+			if(!ENGINE_init(eng)){
+				rc = 0;
+				ENGINE_free(eng);
+				eng = NULL;
+				if (opts->struct_version >= 3)
+					SSLSocket_error("ENGINE_init", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
+				else
+					SSLSocket_error("ENGINE_init", NULL, net->socket, rc, NULL, NULL);
+				goto free_ctx;
+			}
+		}
+		if(opts->privateKeyFormat == MQTT_SSL_PRIVATE_KEY_FORMAT_ENGINE){
+			pkey = ENGINE_load_private_key(eng, opts->privateKey, NULL, NULL);
+			if (opts->privateKey == opts->keyStore)
+				opts->privateKey = NULL;
+			if(!pkey){
+				if (opts->struct_version >= 3)
+					SSLSocket_error("ENGINE_load_private_key", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
+				else
+					SSLSocket_error("ENGINE_load_private_key", NULL, net->socket, rc, NULL, NULL);
+				ENGINE_finish(eng);
+				ENGINE_free(eng);
+				goto free_ctx;
+			}
+			rc = SSL_CTX_use_PrivateKey(net->ctx,pkey);
+			
+			
+			
+			ENGINE_finish(eng);
+			ENGINE_free(eng);
+
+			if(rc != 1){
+				if (opts->struct_version >= 3)
+					SSLSocket_error("SSL_CTX_use_PrivateKey", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
+				else
+					SSLSocket_error("SSL_CTX_use_PrivateKey", NULL, net->socket, rc, NULL, NULL);
+
+				goto free_ctx;
+			}
+		} else
+#endif
+		if(opts->privateKeyFormat == MQTT_SSL_PRIVATE_KEY_FORMAT_FILE){
+			/* support for ASN.1 == DER format? DER can contain only one certificate? */
+			rc = SSL_CTX_use_PrivateKey_file(net->ctx, opts->privateKey, SSL_FILETYPE_PEM);
+			if (opts->privateKey == opts->keyStore)
+				opts->privateKey = NULL;
+			if (rc != 1)
+			{
+				if (opts->struct_version >= 3)
+					SSLSocket_error("SSL_CTX_use_PrivateKey_file", NULL, net->socket, rc, opts->ssl_error_cb, opts->ssl_error_context);
+				else
+					SSLSocket_error("SSL_CTX_use_PrivateKey_file", NULL, net->socket, rc, NULL, NULL);
+				goto free_ctx;
+			}
+		}
+		else{
+			/* Invalid options */
 			goto free_ctx;
 		}
 	}
